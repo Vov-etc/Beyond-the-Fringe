@@ -1,8 +1,10 @@
 // consolClient.cpp: определяет точку входа для консольного приложения.
 //
 //etcp. h
+#ifdef _WIN32
 #pragma comment ( lib, "ws2_32.lib" )
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
+#endif
 #include <cstdio> 
 #include <cstring> 
 #ifdef _WIN32
@@ -13,9 +15,15 @@
 #include <sys/socket.h>
 #endif
 #define PORT 666
-#define SERVERADDR "109.188.125.21"
+#define SERVERADDR "localhost"
 
 typedef u_int SOCKET;
+
+#ifdef __linux__
+typedef errno WSAGetLastError();
+typedef close() closesocket();
+#define SOCKET_ERROR -1
+#endif
 
 int main()
 {
@@ -23,11 +31,17 @@ int main()
 	printf("TCP DEMO CLIENT\n");
 
 	// Шаг 1 - инициализация библиотеки Winsock
-	if (WSAStartup(0x202, (WSADATA *)&buff[0]))
+#ifdef _WIN32
+	WORD wVersion;          // запрашиваемая версия winsock-интерфейса
+	WSADATA wsaData;        // сюда записываются данные о сокете
+	wVersion = MAKEWORD(2, 0);      // задаем версию winsock
+
+	if (WSAStartup(wVersion, &wsaData))
 	{
 		printf("WSAStart error %d\n", WSAGetLastError());
 		return -1;
 	}
+#endif
 
 	// Шаг 2 - создание сокета
 	SOCKET my_sock;
@@ -60,7 +74,9 @@ int main()
 		{
 			printf("Invalid address %s\n", SERVERADDR);
 			closesocket(my_sock);
+#ifdef _WIN32
 			WSACleanup();
+#endif
 			return -1;
 		}
 	}
@@ -94,7 +110,9 @@ int main()
 			// Корректный выход
 			printf("Exit...");
 			closesocket(my_sock);
+#ifdef _WIN32 
 			WSACleanup();
+#endif
 			return 0;
 		}
 
@@ -103,7 +121,9 @@ int main()
 	}
 	printf("Recv error %d\n", WSAGetLastError());
 	closesocket(my_sock);
+#ifdef _WIN32 
 	WSACleanup();
+#endif
 	return -1;
 
 	//return 0;
