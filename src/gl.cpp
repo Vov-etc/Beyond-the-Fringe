@@ -9,7 +9,7 @@
 using namespace std;
 
 typedef float* vec3f;
-#define make_vec3f(x, y, z) new float[3]{x, y, z}
+#define make_vec3f(x, y, z) new float {x, y, z}
 
 
 GLuint vbo;
@@ -20,7 +20,7 @@ static void RenderSceneCB()
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glDrawArrays(GL_POINTS, 0, 3);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
     glDisableVertexAttribArray(0);
 
     glutSwapBuffers();
@@ -33,13 +33,13 @@ static void InitializeGlutCallbacks()
 
 static void create_buffers()
 {
-    /*
+ /*   
     vec3f v[3];
     v[0] = make_vec3f(0, 0, 0);
     v[1] = make_vec3f(1, 0, 0);
     v[2] = make_vec3f(0, 1, 0);
-    */
-    float v[] = {0, 0, 0, 0.5, 0, 0, 0, 0.5, 0};
+   */ 
+    float v[] = {0, 1, 0, 0.5, 0, 0, 0, 0.5, 0};
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(v), v, GL_STATIC_DRAW);
@@ -84,11 +84,11 @@ static void create_shaders()
     len[0] = strlen(shaders[0]);
     len[1] = strlen(shaders[1]);
     glShaderSource(frag_sh, 1, shaders, len);
-    //glShaderSource(vert_sh, 1, shaders + 1, len + 1);
+    glShaderSource(vert_sh, 1, shaders + 1, len + 1);
     compile_shader(frag_sh, "fragment");
     glAttachShader(shader_program, frag_sh);
-    //compile_shader(vert_sh, "vertex");
-    //glAttachShader(shader_program, vert_sh);
+    compile_shader(vert_sh, "vertex");
+    glAttachShader(shader_program, vert_sh);
     glLinkProgram(shader_program);
     check_program(shader_program);
     glUseProgram(shader_program);
