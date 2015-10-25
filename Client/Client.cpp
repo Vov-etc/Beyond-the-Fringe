@@ -5,11 +5,17 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <cstdio> 
 #include <cstring> 
-#include <winsock2.h> 
+#ifdef _WIN32
+#include <winsock2.h>
 #include <windows.h>
-
+#else
+#include <sys/types.h>
+#include <sys/socket.h>
+#endif
 #define PORT 666
 #define SERVERADDR "109.188.125.21"
+
+typedef u_int SOCKET;
 
 int main()
 {
