@@ -1,4 +1,4 @@
-// server.cpp: определяет точку входа для консольного приложения.
+п»ї// server.cpp: РѕРїСЂРµРґРµР»СЏРµС‚ С‚РѕС‡РєСѓ РІС…РѕРґР° РґР»СЏ РєРѕРЅСЃРѕР»СЊРЅРѕРіРѕ РїСЂРёР»РѕР¶РµРЅРёСЏ.
 //
 #ifdef _WIN32
 	#pragma comment ( lib, "ws2_32.lib" )
@@ -7,13 +7,14 @@
 #include <iostream>
 #include <set>
 #include <algorithm>
-#include <cstdio> 
+#include <cstdio>
+#include <thread>
 #include <cstring>
 #include <cstdlib>
 #ifdef _WIN32
 	#include <winsock2.h>
 	#include <windows.h>
-#elif __linux_
+#else
 	#include <sys/types.h>
 	#include <sys/socket.h>
 	#include <cerrno>
@@ -35,10 +36,7 @@
 
 using namespace std;
 
-// прототип функции, обслуживающий подключившихся пользователей
-DWORD WINAPI SexToClient(LPVOID client_socket);
-//прототип функции обмена слов
-void changeWords();
+set <SOCKET> socks;
 
 char* to_charp(int number, int &len)
 {
@@ -60,126 +58,19 @@ char* to_charp(int number, int &len)
 	return ret;
 }
 
-// глобальная переменная - количество активных пользователей
-int nclients = 0;
-//глобальная переменная, в которой храняться принятые от сервера данные
-char *tmp_buff;
-char *tmp_buff_obmen = new char;
-char *tmp_buff_obmen2 = new char;
-set <SOCKET> socks;
-//char buff[20 * 1024];
-int main()
+// Р­С‚Р° С„СѓРЅРєС†РёСЏ СЃРѕР·РґР°РµС‚СЃСЏ РІ РѕС‚РґРµР»СЊРЅРѕРј РїРѕС‚РѕРєРµ 
+// Рё РѕР±СЃСѓР¶РёРІР°РµС‚ РѕС‡РµСЂРµРґРЅРѕРіРѕ РїРѕРґРєР»СЋС‡РёРІС€РµРіРѕСЃСЏ РєР»РёРµРЅС‚Р° РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ РѕСЃС‚Р°Р»СЊРЅС‹С… 
+void new_client(SOCKET client_socket)
 {
-	char buff[1024]; // Буфер для различных нужд
-
-	printf("TCP SERVER DEMO\n");
-	// Шаг 1 - Инициализация Библиотеки Сокетов
-	// т.к. возвращенная функцией информация не используется
-	// ей передается указатель на рабочий буфер, преобразуемый к указателю
-	// на структуру WSADATA.
-	// Такой прием позволяет сэкономить одну переменную, однако, буфер
-	// должен быть не менее полкилобайта размером (структура WSADATA
-	// занимает 400 байт)
-#ifdef _WIN32
-	if (WSAStartup(0x0202, (WSADATA *)&buff[0]))
-	{
-		printf("Error WSAStartup %d\n", WSAGetLastError());
-		return -1;
-	}
-#endif
-	// Шаг 2 - создание сокета
-	SOCKET mysocket;
-	// AF_INET - сокет Интернета
-	// SOCK_STREAM - потоковый сокет (с установкой соединения)
-	// 0 - по умолчанию выбирается TCP протокол
-	if ((mysocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-	{
-		// Ошибка!
-		printf("Error socket %d\n", WSAGetLastError());
-		WSACleanup(); // Деиницилизация библиотеки Winsock
-		return -1;
-	}
-
-	// Шаг 3 - связывание сокета с локальным адресом
-	sockaddr_in local_addr;
-	local_addr.sin_family = AF_INET;
-	local_addr.sin_port = htons(PORT); // не забываем о сетевом порядке!!!
-	local_addr.sin_addr.s_addr = 0; // сервер принимает подключения
-									// на все свои IP-адреса
-
-									// вызываем bind для связывания
-	if (bind(mysocket, (sockaddr *)&local_addr, sizeof(local_addr)))
-	{
-		// Ошибка
-		printf("Error bind %d\n", WSAGetLastError());
-		closesocket(mysocket); // закрываем сокет!
-		WSACleanup();
-		return -1;
-	}
-
-	// Шаг 4 - ожидание подключений
-	// размер очереди - 0x100
-	if (listen(mysocket, 0x100))
-	{
-		// Ошибка
-		printf("Error listen %d\n", WSAGetLastError());
-		closesocket(mysocket);
-		WSACleanup();
-		return -1;
-	}
-
-	printf("ozidanie podkluceniy...\n");
-
-	// Шаг 5 - извлекаем сообщение из очереди
-	SOCKET client_socket; // сокет для клиента
-	sockaddr_in client_addr; // адрес клиента (заполняется системой)
-	int client_addr_size = sizeof(client_addr); // функции accept необходимо передать размер структуры
-
-	// цикл извлечения запросов на подключение из очереди
-	while (client_socket = accept(mysocket, (sockaddr *)&client_addr, &client_addr_size))
-	{
-		nclients++; // увеличиваем счетчик подключившихся клиентов
-
-					// пытаемся получить имя хоста
-		HOSTENT *hst;
-		hst = gethostbyaddr((char *)&client_addr.sin_addr.s_addr, sizeof(int), AF_INET);
-		socks.insert(client_socket);
-
-		// вывод сведений о клиенте
-		printf("+%s [%s] new connect!\n", (hst) ? hst->h_name : "", inet_ntoa(client_addr.sin_addr));
-		if (nclients)
-		{
-			printf("%d User on-line\n", nclients);
-		}
-		else
-		{
-			printf("No User on line\n");
-		}
-
-		// Вызов нового потока для обслужвания клиента
-		// Да, для этого рекомендуется использовать _beginthreadex
-		// но, поскольку никаких вызовов функций стандартной Си библиотеки
-		// поток не делает, можно обойтись и CreateThread
-		DWORD thID;
-		CreateThread(NULL, NULL, SexToClient, &client_socket, NULL, &thID);
-	}
-	return 0;
-}
-// Эта функция создается в отдельном потоке 
-// и обсуживает очередного подключившегося клиента независимо от остальных 
-DWORD WINAPI SexToClient(LPVOID client_socket)
-{
-	SOCKET my_sock;
-	my_sock = ((SOCKET *)client_socket)[0];
-	char buff [BUFSIZ]; //char buff[512];
-	send(my_sock, "SOCKET PODKLUCHEN\n", sizeof("SOCKET PODKLUCHEN\n") + 1, 0);
-	// цикл эхо-сервера: прием строки от клиента и возвращение ее клиенту
+	SOCKET my_sock = client_socket;
+	char buff[BUFSIZ]; //char buff[512];
+	send(my_sock, "Socket connected\n", sizeof("Socket connected\n") + 1, 0);
+	// С†РёРєР» СЌС…Рѕ-СЃРµСЂРІРµСЂР°: РїСЂРёРµРј СЃС‚СЂРѕРєРё РѕС‚ РєР»РёРµРЅС‚Р° Рё РІРѕР·РІСЂР°С‰РµРЅРёРµ РµРµ РєР»РёРµРЅС‚Сѓ
 	int bytes_recv;
 	while ((bytes_recv = recv(my_sock, &buff[0], sizeof(buff), 0)) && bytes_recv != SOCKET_ERROR)
 	{
-		tmp_buff = buff;
-		tmp_buff[bytes_recv] = 0;
-		changeWords();
+		buff[bytes_recv] = 0;
+		cout << buff;
 		for (auto sock : socks)
 		{
 			if (sock != my_sock)
@@ -195,23 +86,100 @@ DWORD WINAPI SexToClient(LPVOID client_socket)
 		}
 	}
 
-	// если мы здесь, то произошел выход из цикла по причине
-	// возращения функцией recv ошибки - соединение с клиентом разорвано
-	nclients--; // уменьшаем счетчик активных клиентов
-	printf("-disconnect\n");
-	if (nclients)
+	// РµСЃР»Рё РјС‹ Р·РґРµСЃСЊ, С‚Рѕ РїСЂРѕРёР·РѕС€РµР» РІС‹С…РѕРґ РёР· С†РёРєР»Р° РїРѕ РїСЂРёС‡РёРЅРµ
+	// РІРѕР·СЂР°С‰РµРЅРёСЏ С„СѓРЅРєС†РёРµР№ recv РѕС€РёР±РєРё - СЃРѕРµРґРёРЅРµРЅРёРµ СЃ РєР»РёРµРЅС‚РѕРј СЂР°Р·РѕСЂРІР°РЅРѕ
+	socks.erase(my_sock);
+	printf("!Socket disconnected %d\n", my_sock);
+	if (socks.size())
 	{
-		printf("%d User on-line\n", nclients);
+		printf("%d User on-line\n", socks.size());
 	}
 	else
 	{
-		printf("No User on line\n");
+		printf("No User on-line\n");
 	}
-	// закрываем сокет
 	closesocket(my_sock);
-	return 0;
+	return;
 }
-void changeWords()
+
+int main()
 {
-	cout << tmp_buff;
+	char buff[1024];
+	printf("SERVER\n");
+	 /*РЁР°Рі 1 - РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ Р‘РёР±Р»РёРѕС‚РµРєРё РЎРѕРєРµС‚РѕРІ
+	 С‚.Рє. РІРѕР·РІСЂР°С‰РµРЅРЅР°СЏ С„СѓРЅРєС†РёРµР№ РёРЅС„РѕСЂРјР°С†РёСЏ РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ
+	 РµР№ РїРµСЂРµРґР°РµС‚СЃСЏ СѓРєР°Р·Р°С‚РµР»СЊ РЅР° СЂР°Р±РѕС‡РёР№ Р±СѓС„РµСЂ, РїСЂРµРѕР±СЂР°Р·СѓРµРјС‹Р№ Рє СѓРєР°Р·Р°С‚РµР»СЋ
+	 РЅР° СЃС‚СЂСѓРєС‚СѓСЂСѓ WSADATA.
+	 РўР°РєРѕР№ РїСЂРёРµРј РїРѕР·РІРѕР»СЏРµС‚ СЃСЌРєРѕРЅРѕРјРёС‚СЊ РѕРґРЅСѓ РїРµСЂРµРјРµРЅРЅСѓСЋ, РѕРґРЅР°РєРѕ, Р±СѓС„РµСЂ
+	 РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РЅРµ РјРµРЅРµРµ РїРѕР»РєРёР»РѕР±Р°Р№С‚Р° СЂР°Р·РјРµСЂРѕРј (СЃС‚СЂСѓРєС‚СѓСЂР° WSADATA
+	 Р·Р°РЅРёРјР°РµС‚ 400 Р±Р°Р№С‚)*/
+#ifdef _WIN32
+	if (WSAStartup(0x0202, (WSADATA *)&buff[0]))
+	{
+		printf("WSAStartup error %d\n", WSAGetLastError());
+		return -1;
+	}
+#endif
+	// РЁР°Рі 2 - СЃРѕР·РґР°РЅРёРµ СЃРѕРєРµС‚Р°
+	SOCKET mysocket;
+	// AF_INET - СЃРѕРєРµС‚ РРЅС‚РµСЂРЅРµС‚Р°
+	// SOCK_STREAM - РїРѕС‚РѕРєРѕРІС‹Р№ СЃРѕРєРµС‚ (СЃ СѓСЃС‚Р°РЅРѕРІРєРѕР№ СЃРѕРµРґРёРЅРµРЅРёСЏ)
+	// 0 - РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РІС‹Р±РёСЂР°РµС‚СЃСЏ TCP РїСЂРѕС‚РѕРєРѕР»
+	if ((mysocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+	{
+		// РћС€РёР±РєР°!
+		printf("Socket error %d\n", WSAGetLastError());
+		WSACleanup(); // Р”РµРёРЅРёС†РёР»РёР·Р°С†РёСЏ Р±РёР±Р»РёРѕС‚РµРєРё Winsock
+		return -1;
+	}
+
+	// РЁР°Рі 3 - СЃРІСЏР·С‹РІР°РЅРёРµ СЃРѕРєРµС‚Р° СЃ Р»РѕРєР°Р»СЊРЅС‹Рј Р°РґСЂРµСЃРѕРј
+	sockaddr_in local_addr;
+	local_addr.sin_family = AF_INET;
+	local_addr.sin_port = htons(PORT); // РЅРµ Р·Р°Р±С‹РІР°РµРј Рѕ СЃРµС‚РµРІРѕРј РїРѕСЂСЏРґРєРµ!!!
+	local_addr.sin_addr.s_addr = 0; // СЃРµСЂРІРµСЂ РїСЂРёРЅРёРјР°РµС‚ РїРѕРґРєР»СЋС‡РµРЅРёСЏ
+									// РЅР° РІСЃРµ СЃРІРѕРё IP-Р°РґСЂРµСЃР°
+
+									// РІС‹Р·С‹РІР°РµРј bind РґР»СЏ СЃРІСЏР·С‹РІР°РЅРёСЏ
+	if (bind(mysocket, (const sockaddr *)&local_addr, (int)sizeof(local_addr)))
+	{
+		printf("Binding error %d\n", WSAGetLastError());
+		closesocket(mysocket);
+		WSACleanup();
+		return -1;
+	}
+
+	// РЁР°Рі 4 - РѕР¶РёРґР°РЅРёРµ РїРѕРґРєР»СЋС‡РµРЅРёР№
+	if (listen(mysocket, 256))
+	{
+		printf("Listening error %d\n", WSAGetLastError());
+		closesocket(mysocket);
+		WSACleanup();
+		return -1;
+	}
+	printf("Waiting connections...\n");
+
+	// РЁР°Рі 5 - РёР·РІР»РµРєР°РµРј СЃРѕРѕР±С‰РµРЅРёРµ РёР· РѕС‡РµСЂРµРґРё
+	SOCKET client_socket; // СЃРѕРєРµС‚ РґР»СЏ РєР»РёРµРЅС‚Р°
+	sockaddr_in client_addr; // Р°РґСЂРµСЃ РєР»РёРµРЅС‚Р° (Р·Р°РїРѕР»РЅСЏРµС‚СЃСЏ СЃРёСЃС‚РµРјРѕР№)
+	int client_addr_size = sizeof(client_addr); // С„СѓРЅРєС†РёРё accept РЅРµРѕР±С…РѕРґРёРјРѕ РїРµСЂРµРґР°С‚СЊ СЂР°Р·РјРµСЂ СЃС‚СЂСѓРєС‚СѓСЂС‹
+	// С†РёРєР» РёР·РІР»РµС‡РµРЅРёСЏ Р·Р°РїСЂРѕСЃРѕРІ РЅР° РїРѕРґРєР»СЋС‡РµРЅРёРµ РёР· РѕС‡РµСЂРµРґРё
+	while (client_socket = accept(mysocket, (sockaddr *)&client_addr, &client_addr_size))
+	{
+		HOSTENT *hst;
+		hst = gethostbyaddr((char *)&client_addr.sin_addr.s_addr, sizeof(int), AF_INET);
+		socks.insert(client_socket);
+		printf("New client:\n%s [%s]\n", (hst) ? hst->h_name : "", inet_ntoa(client_addr.sin_addr));
+		if (socks.size())
+		{
+			printf("%d User on-line\n", socks.size());
+		}
+		else
+		{
+			printf("No User on-line\n");
+		}
+		thread t(new_client, client_socket);
+		t.join();
+	}
+	return 0;
 }

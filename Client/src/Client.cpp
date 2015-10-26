@@ -1,4 +1,4 @@
-// consolClient.cpp: определяет точку входа для консольного приложения.
+п»ї// consolClient.cpp: РѕРїСЂРµРґРµР»СЏРµС‚ С‚РѕС‡РєСѓ РІС…РѕРґР° РґР»СЏ РєРѕРЅСЃРѕР»СЊРЅРѕРіРѕ РїСЂРёР»РѕР¶РµРЅРёСЏ.
 //
 //etcp. h
 #ifdef _WIN32
@@ -23,6 +23,7 @@
 	#define WSAGetLastError() errno 
 	#define closesocket(X) close(X)
 	#define SOCKET_ERROR -1
+	#define WSACleanup() ;
 
 	typedef	int SOCKET;
 #endif
@@ -33,103 +34,96 @@
 int main()
 {
 	char buff[BUFSIZ];
-	printf("TCP DEMO CLIENT\n");
+	printf("CLIENT\n");
 
-	// Шаг 1 - инициализация библиотеки Winsock
+	// РЁР°Рі 1 - РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ Р±РёР±Р»РёРѕС‚РµРєРё Winsock
 #ifdef _WIN32
-	WORD wVersion;          // запрашиваемая версия winsock-интерфейса
-	WSADATA wsaData;        // сюда записываются данные о сокете
-	wVersion = MAKEWORD(2, 0);      // задаем версию winsock
+	WORD wVersion;          // Р·Р°РїСЂР°С€РёРІР°РµРјР°СЏ РІРµСЂСЃРёСЏ winsock-РёРЅС‚РµСЂС„РµР№СЃР°
+	WSADATA wsaData;        // СЃСЋРґР° Р·Р°РїРёСЃС‹РІР°СЋС‚СЃСЏ РґР°РЅРЅС‹Рµ Рѕ СЃРѕРєРµС‚Рµ
+	wVersion = MAKEWORD(2, 0);      // Р·Р°РґР°РµРј РІРµСЂСЃРёСЋ winsock
 
 	if (WSAStartup(wVersion, &wsaData))
 	{
-		printf("WSAStart error %d\n", WSAGetLastError());
+		printf("WSAStartup error %d\n", WSAGetLastError());
 		return -1;
 	}
 #endif
 
-	// Шаг 2 - создание сокета
+	// РЁР°Рі 2 - СЃРѕР·РґР°РЅРёРµ СЃРѕРєРµС‚Р°
 	SOCKET my_sock;
 	my_sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (my_sock < 0)
 	{
-		printf("Socket() error %d\n", WSAGetLastError());
+		printf("Socket error %d\n", WSAGetLastError());
 		return -1;
 	}
 
-	// Шаг 3 - установка соединения
-	// заполнение структуры sockaddr_in - указание адреса и порта сервера
+	// РЁР°Рі 3 - СѓСЃС‚Р°РЅРѕРІРєР° СЃРѕРµРґРёРЅРµРЅРёСЏ
+	// Р·Р°РїРѕР»РЅРµРЅРёРµ СЃС‚СЂСѓРєС‚СѓСЂС‹ sockaddr_in - СѓРєР°Р·Р°РЅРёРµ Р°РґСЂРµСЃР° Рё РїРѕСЂС‚Р° СЃРµСЂРІРµСЂР°
 	sockaddr_in dest_addr;
 	dest_addr.sin_family = AF_INET;
 	dest_addr.sin_port = htons(PORT);
-	// преобразование IP адреса из символьного в сетевой формат
+	// РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ IP Р°РґСЂРµСЃР° РёР· СЃРёРјРІРѕР»СЊРЅРѕРіРѕ РІ СЃРµС‚РµРІРѕР№ С„РѕСЂРјР°С‚
 	if (inet_addr(SERVERADDR) != INADDR_NONE)
 		dest_addr.sin_addr.s_addr = inet_addr(SERVERADDR);
 	else
 	{
-		// попытка получить IP адрес по доменному имени сервера
+		// РїРѕРїС‹С‚РєР° РїРѕР»СѓС‡РёС‚СЊ IP Р°РґСЂРµСЃ РїРѕ РґРѕРјРµРЅРЅРѕРјСѓ РёРјРµРЅРё СЃРµСЂРІРµСЂР°
 		if (gethostbyname(SERVERADDR)) 
         {
-			/// hst->h_addr_list содержит не массив адресов,
-			// а массив указателей на адреса
+			/// hst->h_addr_list СЃРѕРґРµСЂР¶РёС‚ РЅРµ РјР°СЃСЃРёРІ Р°РґСЂРµСЃРѕРІ,
+			// Р° РјР°СЃСЃРёРІ СѓРєР°Р·Р°С‚РµР»РµР№ РЅР° Р°РґСЂРµСЃР°
             dest_addr.sin_addr.s_addr = inet_addr(gethostbyname(SERVERADDR)->h_addr_list[0]);
         }
 		else
 		{
 			printf("Invalid address %s\n", SERVERADDR);
 			closesocket(my_sock);
-#ifdef _WIN32
 			WSACleanup();
-#endif
 			return -1;
 		}
 	}
 
-	// адрес сервера получен - пытаемся установить соединение
+	// Р°РґСЂРµСЃ СЃРµСЂРІРµСЂР° РїРѕР»СѓС‡РµРЅ - РїС‹С‚Р°РµРјСЃСЏ СѓСЃС‚Р°РЅРѕРІРёС‚СЊ СЃРѕРµРґРёРЅРµРЅРёРµ
 	if (connect(my_sock, (sockaddr *)&dest_addr, sizeof(dest_addr)))
 	{
 		printf("Connect error %d\n", WSAGetLastError());
 		return -1;
 	}
 
-	printf("Soedinenie s %s uspeshno ustanovlenno\n \
-            Type quit for quit\n\n", SERVERADDR);
+	printf("Connection with %s is successfull\nType quit for quit\n\n", SERVERADDR);
 
-	// Шаг 4 - чтение и передача сообщений
+	// РЁР°Рі 4 - С‡С‚РµРЅРёРµ Рё РїРµСЂРµРґР°С‡Р° СЃРѕРѕР±С‰РµРЅРёР№
 	int nsize;
 	while ((nsize = recv(my_sock, &buff[0], sizeof(buff) - 1, 0)) != SOCKET_ERROR)
 	{
-		// ставим завершающий ноль в конце строки
+		// СЃС‚Р°РІРёРј Р·Р°РІРµСЂС€Р°СЋС‰РёР№ РЅРѕР»СЊ РІ РєРѕРЅС†Рµ СЃС‚СЂРѕРєРё
 		buff[nsize] = 0;
 
-		// выводим на экран
+		// РІС‹РІРѕРґРёРј РЅР° СЌРєСЂР°РЅ
 		printf("S=>C:%s", buff);
 
-		// читаем пользовательский ввод с клавиатуры
+		// С‡РёС‚Р°РµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёР№ РІРІРѕРґ СЃ РєР»Р°РІРёР°С‚СѓСЂС‹
 		printf("S<=C:"); 
 		fgets(&buff[0], sizeof(buff) - 1, stdin);
 
-		// проверка на "quit"
+		// РїСЂРѕРІРµСЂРєР° РЅР° "quit"
 		if (!strcmp(&buff[0], "quit\n"))
 		{
-			// Корректный выход
+			// РљРѕСЂСЂРµРєС‚РЅС‹Р№ РІС‹С…РѕРґ
 			printf("Exit...");
 			closesocket(my_sock);
-#ifdef _WIN32 
 			WSACleanup();
-#endif
 			return 0;
 		}
 
-		// передаем строку клиента серверу
+		// РїРµСЂРµРґР°РµРј СЃС‚СЂРѕРєСѓ РєР»РёРµРЅС‚Р° СЃРµСЂРІРµСЂСѓ
 		send(my_sock, &buff[0], strlen(&buff[0]), 0);
 	}
-	printf("Recv error %d\n", WSAGetLastError());
+	printf("Recieve error %d\n", WSAGetLastError());
 	closesocket(my_sock);
-#ifdef _WIN32 
 	WSACleanup();
-#endif
-	//return -1;
+	return -1;
 
 	return 0;
 }
