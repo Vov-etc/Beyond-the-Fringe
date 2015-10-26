@@ -5,8 +5,12 @@
 	#pragma comment ( lib, "ws2_32.lib" )
 	#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #endif
-#include <cstdio> 
-#include <cstring> 
+#include <iostream>
+#include <set>
+#include <algorithm>
+#include <cstdio>
+#include <thread>
+#include <cstring>
 #include <cstdlib>
 #ifdef _WIN32
 	#include <winsock2.h>
@@ -24,18 +28,58 @@
 	#define closesocket(X) close(X)
 	#define SOCKET_ERROR -1
 	#define WSACleanup() ;
+	#define HOSTENT hostent
+	#define system("pause") system("wait")
 
 	typedef	int SOCKET;
 #endif
 
+
+using namespace std;
+
+
 #define PORT 4000
 #define SERVERADDR "127.0.0.1"
 
-int main()
+
+thread* in, *out;
+
+
+void in_f(SOCKET my_sock)
 {
 	char buff[BUFSIZ];
-	printf("CLIENT\n");
+	while (true)
+	{
+		fgets(buff, sizeof(buff) - 1, stdin);
+		if (!strcmp(buff, "quit\n"))
+		{
+			printf("Exit...");
+			out = 0;
+			return;
+		}
+		send(my_sock, buff, strlen(buff), 0);
+	}
+}
 
+
+void out_f(SOCKET my_sock)
+{
+	char buff[BUFSIZ];
+	int nsize;
+	while ((nsize = recv(my_sock, &buff[0], sizeof(buff) - 1, 0)) != SOCKET_ERROR)
+	{
+		buff[nsize] = 0;
+		printf("S=>C:\n-----\n%s\n-----\n", buff);
+	}
+	printf("Recieve error %d\n", WSAGetLastError());
+	in = 0;
+	return;
+}
+
+
+int main()
+{
+	printf("CLIENT\n");
 	// Шаг 1 - инициализация библиотеки Winsock
 #ifdef _WIN32
 	WORD wVersion;          // запрашиваемая версия winsock-интерфейса
@@ -94,14 +138,16 @@ int main()
 	printf("Connection with %s is successfull\nType quit for quit\n\n", SERVERADDR);
 
 	// Шаг 4 - чтение и передача сообщений
-	int nsize;
+	in = new thread(in_f, my_sock);
+	out = new thread(out_f, my_sock);
+	/*int nsize;
 	while ((nsize = recv(my_sock, &buff[0], sizeof(buff) - 1, 0)) != SOCKET_ERROR)
 	{
 		// ставим завершающий ноль в конце строки
 		buff[nsize] = 0;
 
 		// выводим на экран
-		printf("S=>C:%s", buff);
+		printf("S=>C:\n%s", buff);
 
 		// читаем пользовательский ввод с клавиатуры
 		printf("S<=C:"); 
@@ -120,10 +166,9 @@ int main()
 		// передаем строку клиента серверу
 		send(my_sock, &buff[0], strlen(&buff[0]), 0);
 	}
-	printf("Recieve error %d\n", WSAGetLastError());
+	printf("Recieve error %d\n", WSAGetLastError());*/
+	while (in != 0 && out != 0);
 	closesocket(my_sock);
 	WSACleanup();
-	return -1;
-
 	return 0;
 }

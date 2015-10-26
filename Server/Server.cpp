@@ -34,9 +34,14 @@
 
 #define PORT 4000
 
+
 using namespace std;
 
-set <SOCKET> socks;
+
+set<SOCKET> socks;
+thread** arr;
+int last_thread;
+
 
 char* to_charp(int number, int &len)
 {
@@ -113,6 +118,8 @@ int main()
 	 Такой прием позволяет сэкономить одну переменную, однако, буфер
 	 должен быть не менее полкилобайта размером (структура WSADATA
 	 занимает 400 байт)*/
+	arr = new thread*[1000000];
+	last_thread = 0;
 #ifdef _WIN32
 	if (WSAStartup(0x0202, (WSADATA *)&buff[0]))
 	{
@@ -132,7 +139,6 @@ int main()
 		WSACleanup(); // Деиницилизация библиотеки Winsock
 		return -1;
 	}
-
 	// Шаг 3 - связывание сокета с локальным адресом
 	sockaddr_in local_addr;
 	local_addr.sin_family = AF_INET;
@@ -178,8 +184,8 @@ int main()
 		{
 			printf("No User on-line\n");
 		}
-		thread t(new_client, client_socket);
-		t.join();
+		arr[last_thread] = (new thread(new_client, client_socket));
+		last_thread++;
 	}
 	return 0;
 }
