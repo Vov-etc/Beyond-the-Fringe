@@ -11,6 +11,7 @@
 #include <thread>
 #include <cstring>
 #include <cstdlib>
+#include <map>
 #ifdef _WIN32
 	#include <winsock2.h>
 	#include <windows.h>
@@ -33,15 +34,15 @@
 #endif
 
 #define PORT 4179
-#define AM_OF_THREADS 5
-
+#define AM_OF_THREADS 50
+//#define get_host_name(hst) ((hst) ? hst->h_name : "")
 using namespace std;
 
 
 set<SOCKET> socks;
 thread** arr;
 int last_thread;
-
+map<SOCKET, const char*> name;
 
 char* to_charp(int number, int &len)
 {
@@ -63,6 +64,22 @@ char* to_charp(int number, int &len)
 	return ret;
 }
 
+const char* get_host_name(HOSTENT* hst)
+{
+    if (!hst)
+        return ": ";
+
+    char* cname = hst->h_name;
+    int n = strlen(cname);
+    char* res = new char[n + 3];
+    for (int i = 0; i < n; i++)
+        res[i] = cname[i];
+    res[n] = ':';
+    res[n + 1] = ' ';
+    res[n + 2] = 0;
+    return res;
+
+}
 // Эта функция создается в отдельном потоке 
 // и обсуживает очередного подключившегося клиента независимо от остальных 
 void new_client(SOCKET client_socket)
@@ -80,12 +97,14 @@ void new_client(SOCKET client_socket)
 		{
 			if (sock != my_sock)
 			{
+                send(sock, name[my_sock], strlen(name[my_sock]), 0);
 				send(sock, &buff[0], bytes_recv, 0);
 			}
 			else
 			{
 				int len;
 				char* res = to_charp(bytes_recv, len);
+                send(sock, name[my_sock], strlen(name[my_sock]), 0);
 				send(sock, res, len, 0);
 			}
 		}
@@ -180,7 +199,8 @@ int main()
 		HOSTENT *hst;
 		hst = gethostbyaddr((char *)&client_addr.sin_addr.s_addr, sizeof(int), AF_INET);
 		socks.insert(client_socket);
-		printf("New client:\n%s [%s]\n", (hst) ? hst->h_name : "", inet_ntoa(client_addr.sin_addr));
+        name[client_socket] = get_host_name(hst);
+		printf("New client:\n%s [%s]\n", get_host_name(hst), inet_ntoa(client_addr.sin_addr));
 		if (socks.size())
 		{
 			printf("%d User on-line\n", socks.size());
