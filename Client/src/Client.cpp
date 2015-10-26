@@ -7,23 +7,31 @@
 #endif
 #include <cstdio> 
 #include <cstring> 
+#include <cstdlib>
 #ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
 #else
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <cerrno>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #endif
-#define PORT 666
-#define SERVERADDR "localhost"
+#define PORT 4000
+#define SERVERADDR "127.0.0.1"
 
-typedef u_int SOCKET;
+typedef int SOCKET;
 
 #ifdef __linux__
-typedef errno WSAGetLastError();
-typedef close() closesocket();
+#define WSAGetLastError() errno 
+#define closesocket(X) close(X)
 #define SOCKET_ERROR -1
+#define HOSTENT hostent
 #endif
+
 
 int main()
 {
@@ -57,19 +65,18 @@ int main()
 	sockaddr_in dest_addr;
 	dest_addr.sin_family = AF_INET;
 	dest_addr.sin_port = htons(PORT);
-	HOSTENT *hst;
-
 	// преобразование IP адреса из символьного в сетевой формат
 	if (inet_addr(SERVERADDR) != INADDR_NONE)
 		dest_addr.sin_addr.s_addr = inet_addr(SERVERADDR);
 	else
 	{
 		// попытка получить IP адрес по доменному имени сервера
-		if (hst = gethostbyname(SERVERADDR))
-			// hst->h_addr_list содержит не массив адресов,
+		if (gethostbyname(SERVERADDR)) 
+        {
+			/// hst->h_addr_list содержит не массив адресов,
 			// а массив указателей на адреса
-			((unsigned long *)&dest_addr.sin_addr)[0] =
-			((unsigned long **)hst->h_addr_list)[0][0];
+            dest_addr.sin_addr.s_addr = inet_addr(gethostbyname(SERVERADDR)->h_addr_list[0]);
+        }
 		else
 		{
 			printf("Invalid address %s\n", SERVERADDR);
@@ -124,7 +131,7 @@ int main()
 #ifdef _WIN32 
 	WSACleanup();
 #endif
-	return -1;
+	//return -1;
 
-	//return 0;
+	return 0;
 }
