@@ -2,36 +2,33 @@
 //
 //etcp. h
 #ifdef _WIN32
-#pragma comment ( lib, "ws2_32.lib" )
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
+	#pragma comment ( lib, "ws2_32.lib" )
+	#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #endif
 #include <cstdio> 
 #include <cstring> 
 #include <cstdlib>
 #ifdef _WIN32
-#include <winsock2.h>
-#include <windows.h>
+	#include <winsock2.h>
+	#include <windows.h>
 #else
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <cerrno>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+	#include <sys/types.h>
+	#include <sys/socket.h>
+	#include <cerrno>
+	#include <unistd.h>
+	#include <netinet/in.h>
+	#include <arpa/inet.h>
+	#include <netdb.h>
+
+	#define WSAGetLastError() errno 
+	#define closesocket(X) close(X)
+	#define SOCKET_ERROR -1
+
+	typedef	int SOCKET;
 #endif
+
 #define PORT 4000
 #define SERVERADDR "127.0.0.1"
-
-typedef int SOCKET;
-
-#ifdef __linux__
-#define WSAGetLastError() errno 
-#define closesocket(X) close(X)
-#define SOCKET_ERROR -1
-#define HOSTENT hostent
-#endif
-
 
 int main()
 {
@@ -109,7 +106,8 @@ int main()
 		printf("S=>C:%s", buff);
 
 		// читаем пользовательский ввод с клавиатуры
-		printf("S<=C:"); fgets(&buff[0], sizeof(buff) - 1, stdin);
+		printf("S<=C:"); 
+		fgets(&buff[0], sizeof(buff) - 1, stdin);
 
 		// проверка на "quit"
 		if (!strcmp(&buff[0], "quit\n"))
