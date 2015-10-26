@@ -1,1 +1,6 @@
 make.exe
+Server/obj
+Server/app
+Client/obj
+Client/app
+

@@ -33,7 +33,7 @@
 #endif
 
 #define PORT 4179
-
+#define AM_OF_THREADS 5
 
 using namespace std;
 
@@ -118,7 +118,7 @@ int main()
 	 Такой прием позволяет сэкономить одну переменную, однако, буфер
 	 должен быть не менее полкилобайта размером (структура WSADATA
 	 занимает 400 байт)*/
-	arr = new thread*[1000000];
+	arr = new thread*[AM_OF_THREADS];
 	last_thread = 0;
 #ifdef _WIN32
 	if (WSAStartup(0x0202, (WSADATA *)&buff[0]))
@@ -189,6 +189,14 @@ int main()
 		{
 			printf("No User on-line\n");
 		}
+        if (last_thread == AM_OF_THREADS)
+        {
+            last_thread = rand() % AM_OF_THREADS;
+            while (last_thread < AM_OF_THREADS and !arr[last_thread]->joinable())
+            {
+                last_thread++;
+            }
+        }
 		arr[last_thread] = (new thread(new_client, client_socket));
 		last_thread++;
 	}
