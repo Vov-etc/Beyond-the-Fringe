@@ -39,7 +39,7 @@
 using namespace std;
 
 
-#define PORT 4000
+#define PORT 4179
 #define SERVERADDR "127.0.0.1"
 
 
@@ -67,7 +67,7 @@ void out_f(SOCKET my_sock)
 {
 	char buff[BUFSIZ];
 	int nsize;
-	while ((nsize = recv(my_sock, buff, sizeof(buff) - 1, 0)) > 1+ (int)SOCKET_ERROR)
+	while ((nsize = recv(my_sock, buff, sizeof(buff) - 1, 0)) > 0)
 	{
 		buff[nsize] = 0;
 		printf("S=>C:\n-----\n%s\n-----\n", buff);

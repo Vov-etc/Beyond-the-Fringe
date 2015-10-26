@@ -32,7 +32,7 @@
 	typedef	int SOCKET;
 #endif
 
-#define PORT 4000
+#define PORT 4179
 
 
 using namespace std;
