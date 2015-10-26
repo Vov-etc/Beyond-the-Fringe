@@ -15,6 +15,7 @@
 #ifdef _WIN32
 	#include <winsock2.h>
 	#include <windows.h>
+    #define SYSTEM_PAUSE system("pause")
 #else
 	#include <sys/types.h>
 	#include <sys/socket.h>
@@ -29,7 +30,7 @@
 	#define SOCKET_ERROR -1
 	#define WSACleanup() ;
 	#define HOSTENT hostent
-	#define system("pause") system("wait")
+	#define SYSTEM_PAUSE system("wait")
 
 	typedef	int SOCKET;
 #endif
@@ -66,7 +67,7 @@ void out_f(SOCKET my_sock)
 {
 	char buff[BUFSIZ];
 	int nsize;
-	while ((nsize = recv(my_sock, &buff[0], sizeof(buff) - 1, 0)) != SOCKET_ERROR)
+	while ((nsize = recv(my_sock, buff, sizeof(buff) - 1, 0)) > 1+ (int)SOCKET_ERROR)
 	{
 		buff[nsize] = 0;
 		printf("S=>C:\n-----\n%s\n-----\n", buff);
@@ -141,7 +142,7 @@ int main()
 	in = new thread(in_f, my_sock);
 	out = new thread(out_f, my_sock);
 	/*int nsize;
-	while ((nsize = recv(my_sock, &buff[0], sizeof(buff) - 1, 0)) != SOCKET_ERROR)
+	while ((nsize = recv(my_sock, buff, sizeof(buff) - 1, 0)) != SOCKET_ERROR)
 	{
 		// ставим завершающий ноль в конце строки
 		buff[nsize] = 0;
@@ -151,10 +152,10 @@ int main()
 
 		// читаем пользовательский ввод с клавиатуры
 		printf("S<=C:"); 
-		fgets(&buff[0], sizeof(buff) - 1, stdin);
+		fgets(buff, sizeof(buff) - 1, stdin);
 
 		// проверка на "quit"
-		if (!strcmp(&buff[0], "quit\n"))
+		if (!strcmp(buff, "quit\n"))
 		{
 			// Корректный выход
 			printf("Exit...");
@@ -164,10 +165,12 @@ int main()
 		}
 
 		// передаем строку клиента серверу
-		send(my_sock, &buff[0], strlen(&buff[0]), 0);
+		send(my_sock, buff, strlen(buff), 0);
 	}
 	printf("Recieve error %d\n", WSAGetLastError());*/
 	while (in != 0 && out != 0);
+    in->~thread();
+    out->~thread();
 	closesocket(my_sock);
 	WSACleanup();
 	return 0;

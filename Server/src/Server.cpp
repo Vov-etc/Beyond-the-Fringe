@@ -168,7 +168,12 @@ int main()
 	// Шаг 5 - извлекаем сообщение из очереди
 	SOCKET client_socket; // сокет для клиента
 	sockaddr_in client_addr; // адрес клиента (заполняется системой)
-	int client_addr_size = sizeof(client_addr); // функции accept необходимо передать размер структуры
+#ifdef _WIN32
+    int client_addr_size;
+#else
+    unsigned int client_addr_size;
+#endif
+ client_addr_size = sizeof(client_addr); // функции accept необходимо передать размер структуры
 	// цикл извлечения запросов на подключение из очереди
 	while (client_socket = accept(mysocket, (sockaddr *)&client_addr, &client_addr_size))
 	{
