@@ -55,7 +55,8 @@ void in_f(SOCKET my_sock)
 		if (!strcmp(buff, "quit\n"))
 		{
 			printf("Exit...");
-			out = 0;
+			in->detach();
+			out->detach();
 			return;
 		}
 		send(my_sock, buff, strlen(buff), 0);
@@ -73,7 +74,8 @@ void out_f(SOCKET my_sock)
 		printf("S=>C:\n-----\n%s\n-----\n", buff);
 	}
 	printf("Recieve error %d\n", WSAGetLastError());
-	in = 0;
+	in->detach();
+	out->detach();
 	return;
 }
 
@@ -81,11 +83,9 @@ void out_f(SOCKET my_sock)
 int main()
 {
 	printf("CLIENT\n");
-	// Шаг 1 - инициализация библиотеки Winsock
 #ifdef _WIN32
-	WORD wVersion;          // запрашиваемая версия winsock-интерфейса
-	WSADATA wsaData;        // сюда записываются данные о сокете
-	wVersion = MAKEWORD(2, 0);      // задаем версию winsock
+	WORD wVersion = MAKEWORD(2, 0);     // запрашиваемая версия winsock-интерфейса
+	WSADATA wsaData;					// сюда записываются данные о сокете
 
 	if (WSAStartup(wVersion, &wsaData))
 	{
@@ -93,8 +93,6 @@ int main()
 		return -1;
 	}
 #endif
-
-	// Шаг 2 - создание сокета
 	SOCKET my_sock;
 	my_sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (my_sock < 0)
@@ -102,21 +100,18 @@ int main()
 		printf("Socket error %d\n", WSAGetLastError());
 		return -1;
 	}
-
-	// Шаг 3 - установка соединения
-	// заполнение структуры sockaddr_in - указание адреса и порта сервера
 	sockaddr_in dest_addr;
 	dest_addr.sin_family = AF_INET;
 	dest_addr.sin_port = htons(PORT);
-	// преобразование IP адреса из символьного в сетевой формат
 	if (inet_addr(SERVERADDR) != INADDR_NONE)
+	{
 		dest_addr.sin_addr.s_addr = inet_addr(SERVERADDR);
+	}
 	else
 	{
-		// попытка получить IP адрес по доменному имени сервера
 		if (gethostbyname(SERVERADDR)) 
         {
-			/// hst->h_addr_list содержит не массив адресов,
+			// hst->h_addr_list содержит не массив адресов,
 			// а массив указателей на адреса
             dest_addr.sin_addr.s_addr = inet_addr(gethostbyname(SERVERADDR)->h_addr_list[0]);
         }
@@ -128,49 +123,15 @@ int main()
 			return -1;
 		}
 	}
-
-	// адрес сервера получен - пытаемся установить соединение
 	if (connect(my_sock, (sockaddr *)&dest_addr, sizeof(dest_addr)))
 	{
 		printf("Connect error %d\n", WSAGetLastError());
 		return -1;
 	}
-
 	printf("Connection with %s is successfull\nType quit for quit\n\n", SERVERADDR);
-
-	// Шаг 4 - чтение и передача сообщений
 	in = new thread(in_f, my_sock);
 	out = new thread(out_f, my_sock);
-	/*int nsize;
-	while ((nsize = recv(my_sock, buff, sizeof(buff) - 1, 0)) != SOCKET_ERROR)
-	{
-		// ставим завершающий ноль в конце строки
-		buff[nsize] = 0;
-
-		// выводим на экран
-		printf("S=>C:\n%s", buff);
-
-		// читаем пользовательский ввод с клавиатуры
-		printf("S<=C:"); 
-		fgets(buff, sizeof(buff) - 1, stdin);
-
-		// проверка на "quit"
-		if (!strcmp(buff, "quit\n"))
-		{
-			// Корректный выход
-			printf("Exit...");
-			closesocket(my_sock);
-			WSACleanup();
-			return 0;
-		}
-
-		// передаем строку клиента серверу
-		send(my_sock, buff, strlen(buff), 0);
-	}
-	printf("Recieve error %d\n", WSAGetLastError());*/
-	while (in != 0 && out != 0);
-    in->~thread();
-    out->~thread();
+	while (in->joinable() && out->joinable());
 	closesocket(my_sock);
 	WSACleanup();
 	return 0;
