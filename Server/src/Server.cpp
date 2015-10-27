@@ -31,6 +31,7 @@
 	#define HOSTENT hostent
 
 	typedef	int SOCKET;
+	typedef	in_addr IN_ADDR;
 #endif
 
 #define PORT 4179
@@ -52,7 +53,6 @@ struct sock_attr
 	}
 };
 
-int last_thread;
 map<SOCKET, sock_attr> socks;
 
 char* to_charp(int number, int &len)
@@ -139,7 +139,6 @@ int main()
 	 Такой прием позволяет сэкономить одну переменную, однако, буфер
 	 должен быть не менее полкилобайта размером (структура WSADATA
 	 занимает 400 байт)*/
-	last_thread = 0;
 #ifdef _WIN32
 	if (WSAStartup(0x0202, (WSADATA *)&buff[0]))
 	{
