@@ -39,10 +39,14 @@
 using namespace std;
 
 
-set<SOCKET> socks;
-thread** arr;
-int last_thread;
-map<SOCKET, const char*> name;
+struct sock_attr
+{
+    const char* name;
+    const char* addr;
+    thread* t;
+};
+
+map<SOCKET, sock_attr> socks;
 
 char* to_charp(int number, int &len)
 {
@@ -78,8 +82,8 @@ const char* get_host_name(HOSTENT* hst)
     res[n + 1] = ' ';
     res[n + 2] = 0;
     return res;
-
 }
+
 // Эта функция создается в отдельном потоке 
 // и обсуживает очередного подключившегося клиента независимо от остальных 
 void new_client(SOCKET client_socket)
@@ -89,23 +93,24 @@ void new_client(SOCKET client_socket)
 	send(my_sock, "Socket connected\n", sizeof("Socket connected\n") + 1, 0);
 	// цикл эхо-сервера: прием строки от клиента и возвращение ее клиенту
 	int bytes_recv;
+    sock_attr my_sock_attr = socks[my_sock];
 	while ((bytes_recv = recv(my_sock, &buff[0], sizeof(buff), 0)) && bytes_recv != SOCKET_ERROR)
 	{
 		buff[bytes_recv] = 0;
 		cout << buff;
 		for (auto sock : socks)
 		{
-			if (sock != my_sock)
+			if (sock.first != my_sock)
 			{
-                send(sock, name[my_sock], strlen(name[my_sock]), 0);
-				send(sock, &buff[0], bytes_recv, 0);
+                send(sock.first, my_sock_attr.name, strlen(my_sock_attr.name), 0);
+				send(sock.first, &buff[0], bytes_recv, 0);
 			}
 			else
 			{
 				int len;
 				char* res = to_charp(bytes_recv, len);
-                send(sock, name[my_sock], strlen(name[my_sock]), 0);
-				send(sock, res, len, 0);
+                send(sock.first, my_sock_attr.name, strlen(my_sock_attr.name), 0);
+				send(sock.first, res, len, 0);
 			}
 		}
 	}
@@ -128,7 +133,6 @@ void new_client(SOCKET client_socket)
 
 int main()
 {
-	char buff[1024];
 	printf("SERVER\n");
 	 /*Шаг 1 - Инициализация Библиотеки Сокетов
 	 т.к. возвращенная функцией информация не используется
@@ -137,8 +141,6 @@ int main()
 	 Такой прием позволяет сэкономить одну переменную, однако, буфер
 	 должен быть не менее полкилобайта размером (структура WSADATA
 	 занимает 400 байт)*/
-	arr = new thread*[AM_OF_THREADS];
-	last_thread = 0;
 #ifdef _WIN32
 	if (WSAStartup(0x0202, (WSADATA *)&buff[0]))
 	{
@@ -198,27 +200,14 @@ int main()
 	{
 		HOSTENT *hst;
 		hst = gethostbyaddr((char *)&client_addr.sin_addr.s_addr, sizeof(int), AF_INET);
-		socks.insert(client_socket);
-        name[client_socket] = get_host_name(hst);
-		printf("New client:\n%s [%s]\n", get_host_name(hst), inet_ntoa(client_addr.sin_addr));
-		if (socks.size())
-		{
-			printf("%d User on-line\n", socks.size());
-		}
-		else
-		{
-			printf("No User on-line\n");
-		}
-        if (last_thread == AM_OF_THREADS)
-        {
-            last_thread = rand() % AM_OF_THREADS;
-            while (last_thread < AM_OF_THREADS and !arr[last_thread]->joinable())
-            {
-                last_thread++;
-            }
-        }
-		arr[last_thread] = (new thread(new_client, client_socket));
-		last_thread++;
+        sock_attr new_sock_attr;
+        new_sock_attr.name = get_host_name(hst);
+        new_sock_attr.addr = inet_ntoa(client_addr.sin_addr);
+		printf("New client:\n%s [%s]\n", new_sock_attr.name, new_sock_attr.addr);
+        new_sock_attr.t = new thread(new_client, client_socket);
+		socks[client_socket] = new_sock_attr;
+        printf("%d User on-line\n", socks.size());
 	}
+    closesocket(mysocket);
 	return 0;
 }
