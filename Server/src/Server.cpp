@@ -44,6 +44,10 @@ struct sock_attr
     const char* name;
     const char* addr;
     thread* t;
+    sock_attr()
+    {
+        name = new char[512];
+    }
 };
 
 map<SOCKET, sock_attr> socks;
@@ -68,29 +72,29 @@ char* to_charp(int number, int &len)
 	return ret;
 }
 
-const char* get_host_name(HOSTENT* hst)
+const char* get_host_name(const char * s)
 {
-    if (!hst)
-        return ": ";
-
-    char* cname = hst->h_name;
-    int n = strlen(cname);
+    int n = strlen(s);
+    printf("%d", n);
     char* res = new char[n + 3];
-    for (int i = 0; i < n; i++)
-        res[i] = cname[i];
-    res[n] = ':';
-    res[n + 1] = ' ';
-    res[n + 2] = 0;
+    int i;
+    for (i = 0; i < n and s[i] != '\n' and s[i] != 0; i++)
+    {
+        res[i] = s[i];
+    }
+    res[i] = ':';
+    res[i + 1] = ' ';
+    res[i + 2] = 0;
     return res;
 }
 
 // Эта функция создается в отдельном потоке 
 // и обсуживает очередного подключившегося клиента независимо от остальных 
-void new_client(SOCKET client_socket)
+void new_client(SOCKET my_sock)
 {
 	char buff[512];
 	send(my_sock, "Socket ", sizeof("Socket ") + 1, 0);
-	send(my_sock, socks[my_sock].get_name(), strlen(socks[my_sock].get_name()), 0);
+	send(my_sock, socks[my_sock].name, strlen(socks[my_sock].name), 0);
 	send(my_sock, " connected\n", sizeof(" connected\n") + 1, 0);
 	int bytes_recv;
     sock_attr my_sock_attr = socks[my_sock];
@@ -114,11 +118,11 @@ void new_client(SOCKET client_socket)
 			}
 		}
 	}
-	printf("!Socket %s disconnected\n", socks[my_sock].get_name());
-	printf("%d User on-line\n", socks.size());
+	printf("!Socket %s disconnected\n", socks[my_sock].name);
 	closesocket(my_sock);
 	socks[my_sock].t->detach();
 	socks.erase(my_sock);
+	printf("%d User on-line\n", (int)socks.size());
 	return;
 }
 
@@ -175,15 +179,19 @@ int main()
 	client_addr_size = sizeof(client_addr);
 	while (client_socket = accept(mysocket, (sockaddr *)&client_addr, &client_addr_size))
 	{
+    /*
 		HOSTENT *hst;
 		hst = gethostbyaddr((char *)&client_addr.sin_addr.s_addr, sizeof(int), AF_INET);
+    */
         sock_attr new_sock_attr;
-        new_sock_attr.name = get_host_name(hst);
+
+        recv(client_socket, (char *)new_sock_attr.name, sizeof(new_sock_attr.name) - 1, 0);
+        new_sock_attr.name = get_host_name(new_sock_attr.name);
         new_sock_attr.addr = inet_ntoa(client_addr.sin_addr);
 		printf("New client:\n%s [%s]\n", new_sock_attr.name, new_sock_attr.addr);
         new_sock_attr.t = new thread(new_client, client_socket);
 		socks[client_socket] = new_sock_attr;
-        printf("%d User on-line\n", socks.size());
+        printf("%d User on-line\n", (int)socks.size());
 	}
     closesocket(mysocket);
 	return 0;
