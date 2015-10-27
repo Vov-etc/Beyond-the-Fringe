@@ -83,6 +83,7 @@ void out_f(SOCKET my_sock)
 int main()
 {
 	printf("CLIENT\n");
+
 #ifdef _WIN32
 	WORD wVersion = MAKEWORD(2, 0);
 	WSADATA wsaData;
@@ -128,6 +129,10 @@ int main()
 		return -1;
 	}
 	printf("Connection with %s is successfull\nType quit for quit\n\n", SERVERADDR);
+    printf("Please, type your name:\n");
+    char* name = new char[512];
+    fgets(name, 511, stdin);
+    send(my_sock, name, strlen(name), 0);
 	in = new thread(in_f, my_sock);
 	out = new thread(out_f, my_sock);
 	while (in->joinable() && out->joinable());
