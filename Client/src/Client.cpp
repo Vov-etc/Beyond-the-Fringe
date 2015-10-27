@@ -40,7 +40,7 @@ using namespace std;
 
 
 #define PORT 4179
-#define SERVERADDR "127.0.0.1"
+#define SERVERADDR "127.0.0.1" //"172.16.8.147"
 
 
 thread* in, *out;
@@ -84,9 +84,8 @@ int main()
 {
 	printf("CLIENT\n");
 #ifdef _WIN32
-	WORD wVersion = MAKEWORD(2, 0);     // запрашиваемая версия winsock-интерфейса
-	WSADATA wsaData;					// сюда записываются данные о сокете
-
+	WORD wVersion = MAKEWORD(2, 0);
+	WSADATA wsaData;
 	if (WSAStartup(wVersion, &wsaData))
 	{
 		printf("WSAStartup error %d\n", WSAGetLastError());

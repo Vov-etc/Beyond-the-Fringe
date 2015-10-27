@@ -35,14 +35,25 @@
 
 #define PORT 4179
 #define AM_OF_THREADS 50
-//#define get_host_name(hst) ((hst) ? hst->h_name : "")
 using namespace std;
 
 
-set<SOCKET> socks;
-thread** arr;
+struct sock_attr
+{
+	IN_ADDR* addr;
+	thread* t;
+	char* get_name()
+	{
+		return gethostbyaddr((char *)&(addr->s_addr), sizeof(int), AF_INET)->h_name;
+	}
+	char* get_addr()
+	{
+		return inet_ntoa(*addr);
+	}
+};
+
 int last_thread;
-map<SOCKET, const char*> name;
+map<SOCKET, sock_attr> socks;
 
 char* to_charp(int number, int &len)
 {
@@ -80,14 +91,14 @@ const char* get_host_name(HOSTENT* hst)
     return res;
 
 }
-// Эта функция создается в отдельном потоке 
-// и обсуживает очередного подключившегося клиента независимо от остальных 
-void new_client(SOCKET client_socket)
+
+
+void new_client(SOCKET my_sock)
 {
-	SOCKET my_sock = client_socket;
-	char buff[BUFSIZ]; //char buff[512];
-	send(my_sock, "Socket connected\n", sizeof("Socket connected\n") + 1, 0);
-	// цикл эхо-сервера: прием строки от клиента и возвращение ее клиенту
+	char buff[512];
+	send(my_sock, "Socket ", sizeof("Socket ") + 1, 0);
+	send(my_sock, socks[my_sock].get_name(), strlen(socks[my_sock].get_name()), 0);
+	send(my_sock, " connected\n", sizeof(" connected\n") + 1, 0);
 	int bytes_recv;
 	while ((bytes_recv = recv(my_sock, &buff[0], sizeof(buff), 0)) && bytes_recv != SOCKET_ERROR)
 	{
@@ -95,34 +106,25 @@ void new_client(SOCKET client_socket)
 		cout << buff;
 		for (auto sock : socks)
 		{
-			if (sock != my_sock)
+			if (sock.first != my_sock)
 			{
-                send(sock, name[my_sock], strlen(name[my_sock]), 0);
-				send(sock, &buff[0], bytes_recv, 0);
+                send(sock.first, socks[my_sock].get_name(), strlen(socks[my_sock].get_name()), 0);
+				send(sock.first, &buff[0], bytes_recv, 0);
 			}
 			else
 			{
 				int len;
 				char* res = to_charp(bytes_recv, len);
-                send(sock, name[my_sock], strlen(name[my_sock]), 0);
-				send(sock, res, len, 0);
+                send(sock.first, socks[my_sock].get_name(), strlen(socks[my_sock].get_name()), 0);
+				send(sock.first, res, len, 0);
 			}
 		}
 	}
-
-	// если мы здесь, то произошел выход из цикла по причине
-	// возращения функцией recv ошибки - соединение с клиентом разорвано
-	socks.erase(my_sock);
-	printf("!Socket disconnected %d\n", my_sock);
-	if (socks.size())
-	{
-		printf("%d User on-line\n", socks.size());
-	}
-	else
-	{
-		printf("No User on-line\n");
-	}
+	printf("!Socket %s disconnected\n", socks[my_sock].get_name());
+	printf("%d User on-line\n", socks.size());
 	closesocket(my_sock);
+	socks[my_sock].t->detach();
+	socks.erase(my_sock);
 	return;
 }
 
@@ -131,13 +133,12 @@ int main()
 	char buff[1024];
 	printf("SERVER\n");
 	 /*Шаг 1 - Инициализация Библиотеки Сокетов
-	 т.к. возвращенная функцией информация не используется
+	 т.к. возвращенная функцией информация не используется,
 	 ей передается указатель на рабочий буфер, преобразуемый к указателю
 	 на структуру WSADATA.
 	 Такой прием позволяет сэкономить одну переменную, однако, буфер
 	 должен быть не менее полкилобайта размером (структура WSADATA
 	 занимает 400 байт)*/
-	arr = new thread*[AM_OF_THREADS];
 	last_thread = 0;
 #ifdef _WIN32
 	if (WSAStartup(0x0202, (WSADATA *)&buff[0]))
@@ -146,26 +147,17 @@ int main()
 		return -1;
 	}
 #endif
-	// Шаг 2 - создание сокета
 	SOCKET mysocket;
-	// AF_INET - сокет Интернета
-	// SOCK_STREAM - потоковый сокет (с установкой соединения)
-	// 0 - по умолчанию выбирается TCP протокол
 	if ((mysocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
-		// Ошибка!
 		printf("Socket error %d\n", WSAGetLastError());
-		WSACleanup(); // Деиницилизация библиотеки Winsock
+		WSACleanup();
 		return -1;
 	}
-	// Шаг 3 - связывание сокета с локальным адресом
 	sockaddr_in local_addr;
 	local_addr.sin_family = AF_INET;
-	local_addr.sin_port = htons(PORT); // не забываем о сетевом порядке!!!
-	local_addr.sin_addr.s_addr = 0; // сервер принимает подключения
-									// на все свои IP-адреса
-
-									// вызываем bind для связывания
+	local_addr.sin_port = htons(PORT);
+	local_addr.sin_addr.s_addr = 0;
 	if (bind(mysocket, (const sockaddr *)&local_addr, (int)sizeof(local_addr)))
 	{
 		printf("Binding error %d\n", WSAGetLastError());
@@ -173,8 +165,6 @@ int main()
 		WSACleanup();
 		return -1;
 	}
-
-	// Шаг 4 - ожидание подключений
 	if (listen(mysocket, 256))
 	{
 		printf("Listening error %d\n", WSAGetLastError());
@@ -183,42 +173,28 @@ int main()
 		return -1;
 	}
 	printf("Waiting connections...\n");
-
-	// Шаг 5 - извлекаем сообщение из очереди
-	SOCKET client_socket; // сокет для клиента
-	sockaddr_in client_addr; // адрес клиента (заполняется системой)
+	SOCKET client_socket;
+	sockaddr_in client_addr;
 #ifdef _WIN32
     int client_addr_size;
 #else
     unsigned int client_addr_size;
 #endif
- client_addr_size = sizeof(client_addr); // функции accept необходимо передать размер структуры
-	// цикл извлечения запросов на подключение из очереди
+	client_addr_size = sizeof(client_addr);
 	while (client_socket = accept(mysocket, (sockaddr *)&client_addr, &client_addr_size))
 	{
-		HOSTENT *hst;
-		hst = gethostbyaddr((char *)&client_addr.sin_addr.s_addr, sizeof(int), AF_INET);
-		socks.insert(client_socket);
-        name[client_socket] = get_host_name(hst);
-		printf("New client:\n%s [%s]\n", get_host_name(hst), inet_ntoa(client_addr.sin_addr));
-		if (socks.size())
-		{
-			printf("%d User on-line\n", socks.size());
-		}
-		else
-		{
-			printf("No User on-line\n");
-		}
-        if (last_thread == AM_OF_THREADS)
+		socks[client_socket].addr = &client_addr.sin_addr;
+		printf("New client:\n%s [%s]\n", socks[client_socket].get_name(), socks[client_socket].get_addr());
+		printf("%d User on-line\n", socks.size());
+        /*last_thread = rand() % AM_OF_THREADS;
+        while (last_thread < AM_OF_THREADS && !arr[last_thread]->joinable())
         {
-            last_thread = rand() % AM_OF_THREADS;
-            while (last_thread < AM_OF_THREADS and !arr[last_thread]->joinable())
-            {
-                last_thread++;
-            }
+            last_thread++;
         }
 		arr[last_thread] = (new thread(new_client, client_socket));
-		last_thread++;
+		last_thread++;*/
+		socks[client_socket].t = new thread(new_client, client_socket);
 	}
+	closesocket(mysocket);
 	return 0;
 }
