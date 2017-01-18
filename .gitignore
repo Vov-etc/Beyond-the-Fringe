@@ -1,6 +1,4 @@
-make.exe
-Server/obj
-Server/app
-Client/obj
-Client/app
-
+Server/build
+Server/server.exe
+Client/build
+Client/client.exe

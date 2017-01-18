@@ -78,7 +78,7 @@ const char* get_host_name(const char * s)
     printf("%d", n);
     char* res = new char[n + 3];
     int i;
-    for (i = 0; i < n and s[i] != '\n' and s[i] != 0; i++)
+    for (i = 0; i < n && s[i] != '\n' && s[i] != 0; i++)
     {
         res[i] = s[i];
     }
@@ -137,19 +137,15 @@ int main()
 	 должен быть не менее полкилобайта размером (структура WSADATA
 	 занимает 400 байт)*/
 #ifdef _WIN32
-	if (WSAStartup(0x0202, (WSADATA *)&buff[0]))
+    char buff[1024];
+	if (WSAStartup(0x0202, (WSADATA *)&buff))
 	{
 		printf("WSAStartup error %d\n", WSAGetLastError());
 		return -1;
 	}
 #endif
 	SOCKET mysocket;
-	if ((mysocket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-	{
-		printf("Socket error %d\n", WSAGetLastError());
-		WSACleanup();
-		return -1;
-	}
+    mysocket = socket(AF_INET, SOCK_STREAM, 0);
 	sockaddr_in local_addr;
 	local_addr.sin_family = AF_INET;
 	local_addr.sin_port = htons(PORT);
