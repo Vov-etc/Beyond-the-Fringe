@@ -1,4 +1,6 @@
-#pragma once
+#ifndef BUFFER_H
+#define BUFFER_H
+
 #include <iostream>
 #include <vector>
 
@@ -26,6 +28,7 @@ public:
 
     char* recv() {
         reading = false;
+        curr_pointer = buffer;
         return buffer;
     }
 
@@ -36,6 +39,7 @@ public:
         }
         memcpy(curr_pointer, from, sizeof(T));
         curr_pointer += sizeof(T) / sizeof(char);
+        curr_pointer[0] = 0;
     }
 
     template <typename T>
@@ -56,4 +60,13 @@ public:
             read(elem);
         }
     }
+
+    template <typename T>
+    void read_vector(std::vector<T> &from) {
+        write(from.size());
+        for (int i = 0; i < from.size(); i++) {
+            write(from[i]);
+        }
+    }
 };
+#endif //BUFFER_H

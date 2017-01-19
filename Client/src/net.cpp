@@ -2,23 +2,11 @@
 #include "include/net_includes.h"
 #include "include/net.h"
 #include <stdexcept>
-#include <vector>
 #include <thread>
 #include <iostream>
-#include <GL/glut.h>
 
 
 using namespace std;
-
-#ifdef _WIN32
-    #include <winsock2.h>
-    #include <windows.h>
-#else
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include <arpa/inet.h>
-    #include <netdb.h>
-#endif
 
 
 int Net::get_data_timeout(SOCKET client_socket, size_t len, int sec, int usec) {
@@ -72,7 +60,9 @@ void Net::update(int msg, int x, int y) {
         buffer[1] = 0;
         size = 1;
         send(my_socket, buffer.recv(), size, MSG_CONFIRM);
-        recv(my_socket, buffer.recv(), BUFF_SIZE - 1, MSG_CONFIRM);
+        if (get_data_timeout(my_socket, BUFF_SIZE, 4)) {
+            cerr << "Connect error: " << WSAGetLastError() << endl;
+        }
         break;
 
     default:

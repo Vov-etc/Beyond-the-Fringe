@@ -3,25 +3,21 @@
 
 #ifdef _WIN32
     #pragma comment ( lib, "ws2_32.lib" )
-
     #define _WINSOCK_DEPRECATED_NO_WARNINGS
-    #include <cwchar>
+
     #include <winsock2.h>
     #include <windows.h>
 
     #define MSG_CONFIRM 0
     #define SHUT_RDWR 0
-
-    typedef int socklen_t;
 #else
+    #include <sys/socket.h>
     #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <netdb.h>
+    #define WSAGetLastError() errno
     typedef int SOCKET;
 #endif
-
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
 
 #define SERVERADDR "127.0.0.1"
 const static short PORT = 5050;

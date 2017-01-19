@@ -1,5 +1,5 @@
-#ifndef FILE_
-#define FILE_
+#ifndef FILE_H
+#define FILE_H
 
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -7,4 +7,4 @@
 
 GLchar* read_file(const char* name);
 
-#endif //FILE_
+#endif //FILE_H

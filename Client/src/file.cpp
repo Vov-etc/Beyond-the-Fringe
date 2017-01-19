@@ -3,8 +3,7 @@
 #include "include/file.h"
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string>
+#include <fstream>
 
 char *read_file(const char * filename) {
     FILE *file = fopen(filename, "rb");
