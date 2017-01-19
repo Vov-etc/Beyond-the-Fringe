@@ -1,8 +1,6 @@
 #pragma comment(lib,"ws2_32.lib")
 #include "include/net_includes.h"
 #include "include/net.h"
-#include <winsock2.h>
-#include <windows.h>  
 #include <stdexcept>
 #include <vector>
 #include <thread>
@@ -11,6 +9,16 @@
 
 
 using namespace std;
+
+#ifdef _WIN32
+    #include <winsock2.h>
+    #include <windows.h>
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <netdb.h>
+#endif
 
 
 int Net::get_data_timeout(SOCKET client_socket, size_t len, int sec, int usec) {
