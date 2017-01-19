@@ -17,7 +17,7 @@ int Net::get_data_timeout(SOCKET client_socket, size_t len, int sec, int usec) {
     timeout.tv_sec = sec;
     timeout.tv_usec = usec;
     if (select(client_socket + 1, &readfds, NULL, NULL, &timeout) > 0) {
-        return recv(client_socket, buffer.recv(), len, MSG_CONFIRM);
+        return recv(client_socket, buffer.get_data(), len, MSG_CONFIRM);
     }
     return -1;
 }
@@ -56,10 +56,9 @@ void Net::update(int msg, int x, int y) {
     int size = 0;
     switch (msg) {
     case MSG_HELLO:
-        buffer[0] = msg;
-        buffer[1] = 0;
+        buffer.read(msg);
         size = 1;
-        send(my_socket, buffer.recv(), size, MSG_CONFIRM);
+        send(my_socket, buffer.get_data(), size, MSG_CONFIRM);
         if (get_data_timeout(my_socket, BUFF_SIZE, 4)) {
             cerr << "Connect error: " << WSAGetLastError() << endl;
         }

@@ -12,18 +12,21 @@ all: app
 win: app
 	$(LD) build/*.o $(DLL_WIN) -o $(EXE).exe
 
-app: build build/main.o build/shader.o build/file.o build/net.o
+app: build build/main.o build/shader.o build/file.o build/net.o build/buffer.o
 
 build/main.o: src/main.cpp src/include/shader.h
 	$(COMPILE)
 	
-build/net.o: src/net.cpp src/include/net.h src/include/net_includes.h src/include/buff.h
+build/net.o: src/net.cpp src/include/net.h src/include/net_includes.h src/include/buffer.h
 	$(COMPILE)
 	
 build/file.o: src/file.cpp src/include/file.h
 	$(COMPILE)
 	
 build/shader.o: src/shader.cpp src/include/shader.h
+	$(COMPILE)
+
+build/buffer.o: src/buffer.cpp src/include/buffer.h
 	$(COMPILE)
 
 build: 
