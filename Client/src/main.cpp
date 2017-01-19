@@ -5,13 +5,13 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include <GL\glew.h>
-#include <GL\glut.h>
+#include <GL/glew.h>
+#include <GL/glut.h>
 #include "include/shader.h"
+#include "include/net.h"
 
 
 using namespace std;
-
 
 struct vec {
     float x, y;
@@ -22,8 +22,10 @@ struct vec {
 };
 
 void display();
+void special(int key, int x, int y);
 
 GLuint ShaderProg, VBO, move_location;
+Net net;
 
 
 void init_res() {
@@ -46,6 +48,7 @@ void init_res() {
 
 void init_callback() {
     glutDisplayFunc(display);
+    glutSpecialFunc(special);
 }
 
 
@@ -92,4 +95,16 @@ void display() {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glDisableVertexAttribArray(0);
     glutSwapBuffers();
+    return;
+}
+
+void special(int key, int x, int y) {
+    switch (key) {
+    case GLUT_KEY_INSERT:
+        net.update(MSG_HELLO, x, y);
+        break;
+
+    default:
+        break;
+    }
 }

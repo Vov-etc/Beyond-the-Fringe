@@ -34,7 +34,7 @@
 	typedef	in_addr IN_ADDR;
 #endif
 
-#define PORT 4179
+#define PORT 5050
 #define AM_OF_THREADS 50
 using namespace std;
 

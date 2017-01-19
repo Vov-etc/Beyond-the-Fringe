@@ -2,11 +2,15 @@
 #include "include/net_includes.h"
 #include "include/net.h"
 #include <winsock2.h>
-#include <windows.h>
-#include <cstdio>   
+#include <windows.h>  
 #include <stdexcept>
 #include <vector>
 #include <thread>
+#include <iostream>
+#include <GL/glut.h>
+
+
+using namespace std;
 
 
 int Net::get_data_timeout(SOCKET client_socket, size_t len, int sec, int usec) {
@@ -17,48 +21,58 @@ int Net::get_data_timeout(SOCKET client_socket, size_t len, int sec, int usec) {
     timeout.tv_sec = sec;
     timeout.tv_usec = usec;
     if (select(client_socket + 1, &readfds, NULL, NULL, &timeout) > 0) {
-        return recv(client_socket, buffer, len, MSG_CONFIRM);
+        return recv(client_socket, buffer.recv(), len, MSG_CONFIRM);
     }
     return -1;
 }
 
 Net::Net() {
-    buffer = new char[BUFF_SIZE];
-  #ifdef _WIN32
+#ifdef _WIN32
     if (WSAStartup(MAKEWORD(2, 2), (WSADATA *)&buffer[0]))
     {
         throw std::runtime_error("WSAStartup error");
     }
-  #endif
-    my_socket = socket(AF_INET, SOCK_STREAM, 0); // you create your socket object
+#endif
+    my_socket = socket(AF_INET, SOCK_STREAM, 0);
     sockaddr_in serv_addr;
     memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(PORT);
-    printf("port = %d\n", PORT); 
+    cout << "port = " << PORT << endl;
     if (inet_addr(SERVERADDR) != INADDR_NONE) {
         serv_addr.sin_addr.s_addr = inet_addr(SERVERADDR);
-    } else {
+    }
+    else {
         serv_addr.sin_addr.s_addr = inet_addr(gethostbyname(SERVERADDR)->h_addr_list[0]);
     }
-    if (connect(my_socket, (sockaddr *)&serv_addr, sizeof(serv_addr))) {
-        printf("Connect error %d\n", WSAGetLastError());
-    }
+    connect(my_socket, (sockaddr *)&serv_addr, sizeof(serv_addr));
+    cerr << "Connect error: " << WSAGetLastError() << endl;
 }
 
 Net::~Net() {
-  delete[] buffer;
-  shutdown(my_socket, SHUT_RDWR);
-  #ifdef _WIN32
+    shutdown(my_socket, SHUT_RDWR);
+#ifdef _WIN32
     WSACleanup();
-  #endif
+#endif
 }
 
-int Net::connect_with_client(SOCKET &client_socket) {
-    socklen_t client_length;
-    struct sockaddr_in client_addr;
-    client_length = sizeof(client_addr);
-    client_socket = accept(my_socket, (struct sockaddr *) &client_addr, &client_length); 
-    // at previous line you wait until one client connects with you
-    return 0;
+void Net::update(int msg, int x, int y) {
+    int size = 0;
+    switch (msg) {
+    case MSG_HELLO:
+        buffer[0] = msg;
+        buffer[1] = 0;
+        size = 1;
+        send(my_socket, buffer.recv(), size, MSG_CONFIRM);
+        recv(my_socket, buffer.recv(), BUFF_SIZE - 1, MSG_CONFIRM);
+        break;
+
+    default:
+        break;
+    }
+    for (int i = 0; i < BUFF_SIZE && buffer[i] != 0; i++) {
+        cout << (int)buffer[i] << " ";
+    }
+    cout << endl;
+    return;
 }

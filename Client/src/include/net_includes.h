@@ -24,7 +24,6 @@
 #include <iostream>
 
 #define SERVERADDR "127.0.0.1"
-const static int BUFF_SIZE = 1024 * 1024;
 const static short PORT = 5050;
 
 const static int MSG_FAIL = 0;
