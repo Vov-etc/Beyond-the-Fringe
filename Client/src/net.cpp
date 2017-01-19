@@ -1,12 +1,21 @@
 #pragma comment(lib,"ws2_32.lib")
 #include "include/net_includes.h"
 #include "include/net.h"
-#include <winsock2.h>
-#include <windows.h>
+
 #include <cstdio>   
 #include <stdexcept>
 #include <vector>
 #include <thread>
+
+#ifdef _WIN32
+    #include <winsock2.h>
+    #include <windows.h>
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <netdb.h>
+#endif
 
 
 int Net::get_data_timeout(SOCKET client_socket, size_t len, int sec, int usec) {
@@ -42,7 +51,7 @@ Net::Net() {
         serv_addr.sin_addr.s_addr = inet_addr(gethostbyname(SERVERADDR)->h_addr_list[0]);
     }
     if (connect(my_socket, (sockaddr *)&serv_addr, sizeof(serv_addr))) {
-        printf("Connect error %d\n", WSAGetLastError());
+        printf("Connect error %d", errno);
     }
 }
 
