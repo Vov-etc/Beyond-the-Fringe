@@ -29,7 +29,7 @@ int Net::get_data_timeout(SOCKET client_socket, size_t len, int sec, int usec) {
     timeout.tv_sec = sec;
     timeout.tv_usec = usec;
     if (select(client_socket + 1, &readfds, NULL, NULL, &timeout) > 0) {
-        return recv(client_socket, buffer.recv(), len, MSG_CONFIRM);
+        return recv(client_socket, buffer.get_data(), len, MSG_CONFIRM);
     }
     return -1;
 }
@@ -54,7 +54,7 @@ Net::Net() {
         serv_addr.sin_addr.s_addr = inet_addr(gethostbyname(SERVERADDR)->h_addr_list[0]);
     }
     connect(my_socket, (sockaddr *)&serv_addr, sizeof(serv_addr));
-    cerr << "Connect error: " << WSAGetLastError() << endl;
+    cerr << "Connect error: " << errno << endl;
 }
 
 Net::~Net() {
@@ -71,8 +71,8 @@ void Net::update(int msg, int x, int y) {
         buffer[0] = msg;
         buffer[1] = 0;
         size = 1;
-        send(my_socket, buffer.recv(), size, MSG_CONFIRM);
-        recv(my_socket, buffer.recv(), BUFF_SIZE - 1, MSG_CONFIRM);
+        send(my_socket, buffer.get_data(), size, MSG_CONFIRM);
+        recv(my_socket, buffer.get_data(), BUFF_SIZE - 1, MSG_CONFIRM);
         break;
 
     default:

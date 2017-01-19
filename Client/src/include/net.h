@@ -2,13 +2,13 @@
 #define NET_H
 
 #include "net_includes.h"
-#include "buff.h"
+#include "buffer.h"
 #include <map>
 
 
 class Net {
     SOCKET my_socket;
-    buff buffer;
+    Buffer buffer;
 
     int get_data_timeout(SOCKET client_socket, size_t len, int sec = 0, int usec = 0);
   public:
