@@ -5,6 +5,6 @@
 #include <GL/freeglut.h>
 #include <string>
 
-GLchar* read_file(const char* name);
+std::string read_file(const char* name);
 
 #endif //FILE_H

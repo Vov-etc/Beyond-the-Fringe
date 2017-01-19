@@ -1,5 +1,7 @@
 #ifndef BUFFER_H
 #define BUFFER_H
+
+#include <cstring>
 #include <vector>
 
 extern const int BUFF_SIZE;

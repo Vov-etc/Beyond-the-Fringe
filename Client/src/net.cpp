@@ -1,8 +1,10 @@
 #pragma comment(lib,"ws2_32.lib")
+
 #include "include/net_includes.h"
 #include "include/net.h"
 #include <stdexcept>
 #include <thread>
+#include <cstring>
 #include <iostream>
 
 

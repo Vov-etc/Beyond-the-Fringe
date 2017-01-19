@@ -1,55 +1,22 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #include "include/file.h"
-
-//#include <stdio.h>
+#include <stdio.h>
 #include <fstream>
-#include <iostream>
+#include <string>
 
-char *read_file(const char * filename) {
-    /*FILE *file = fopen(filename, "rb");
-    if (file == NULL) {
-        return NULL;
-    }
-    if (fseek(file, 0, SEEK_END) == -1) {
-        return NULL;
-    }
-    long int size = ftell(file);
-    std::cout << size << std::endl;
-    if (size == -1) {
-        return NULL;
-    }
-    if (fseek(file, 0, SEEK_SET) == -1) {
-        return NULL;
-    }
-    char *data = new char[size + 1];
-    if (data == NULL) {
-        return NULL;
-    }
-    if (fread(data, 1, size, file) != (size_t) size || ferror(file)) {
-        free(data);
-        return NULL;
-    }
-    fclose(file);
-    data[size] = '\0';
-    return data;*/
-
-
-    std::fstream fin;
-    fin.open(filename, std::ios_base::in);
+std::string read_file(const char * filename) {
+    std::ifstream fin;
+    fin.open(filename);
     if (!fin.is_open()) {
-        return NULL;
+        char error_message[200];
+        sprintf(error_message, "cannot open file %s", filename);
+        throw std::runtime_error(error_message);
     }
-    fin.seekp(0, std::ios::end);
-    int size = fin.tellg();
-    std::cout << size << std::endl;
-    fin.seekp(0, std::ios::beg);
-    char *data = new char[size + 1];
-    if (data == NULL) {
-        return NULL;
-    }
-    fin.read(data, size);
-    data[size] = '\0';
+    auto buffer = fin.rdbuf();
+    int size = buffer->in_avail();
+    std::string data(size + 1, 0);
+    buffer->sgetn(&data[0], size);
     fin.close();
     return data;
 }

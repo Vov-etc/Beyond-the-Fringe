@@ -4,11 +4,7 @@
 using namespace std;
 
 GLuint create_shader(const char *filename, GLenum type) {
-    GLchar *source = read_file(filename);
-    if (source == NULL) {
-        cerr << "Error while reading shader: " << filename << endl;
-        return -1;
-    }
+    std::string source = read_file(filename);
     GLuint shader = glCreateShader(type);
     const GLchar *sources[2] = {
 #ifdef GL_ES_VERSION_2_0
@@ -17,10 +13,9 @@ GLuint create_shader(const char *filename, GLenum type) {
 #else
         "#version 120\n",
 #endif
-        source
+        source.data()
     };
     glShaderSource(shader, 2, sources, NULL);
-    free(source);
     glCompileShader(shader);
     GLint compile_status = GL_FALSE;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &compile_status);
