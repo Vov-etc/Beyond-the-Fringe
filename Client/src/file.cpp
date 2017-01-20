@@ -5,7 +5,7 @@
 #include <fstream>
 #include <string>
 
-std::string read_file(const char * filename) {
+std::string read_file(const char *filename) {
     std::ifstream fin;
     fin.open(filename);
     if (!fin.is_open()) {
@@ -13,19 +13,11 @@ std::string read_file(const char * filename) {
         sprintf(error_message, "cannot open file %s", filename);
         throw std::runtime_error(error_message);
     }
-    fin.sync();
-	std::string data;
-	getline(fin, data);
-    auto buffer = fin.rdbuf();
-    int size = buffer->in_avail();
-    if (size == 0) {
-        char error_message[200];
-        sprintf(error_message, "File %s is empty", filename);
-        throw std::runtime_error(error_message);
+    std::string data, line;
+    while (getline(fin, line)) {
+        data += line;
+        data += '\n';
     }
-	int line_size = data.size();
-	data.resize(size + line_size + 1);
-    buffer->sgetn(&data[line_size], size);
     fin.close();
     return data;
 }
