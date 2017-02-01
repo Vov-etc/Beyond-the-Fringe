@@ -3,6 +3,7 @@
 
 #include "net_includes.h"
 #include "buffer.h"
+#include "controls.h"
 
 
 class Net {
@@ -13,8 +14,7 @@ class Net {
   public:
     Net();
     ~Net();
-    void update(int msg, int x, int y);
+    void update(int msg, Controls keys);
 };
 
-
-#endif // NET_H
+#endif //NET_H

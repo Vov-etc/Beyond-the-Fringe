@@ -49,7 +49,7 @@ Net::Net() {
         i++;
         serv_addr.sin_port = htons(PORT + i);
     }
-    printf("port = %d\n", PORT + i);
+    std::cout << "port = " << PORT + i << std::endl;
     listen(my_socket, 5);
     std::thread accepting_thread(accept_new_clients, std::ref(*this));
     accepting_thread.detach();
@@ -69,7 +69,7 @@ int Net::connect_with_client(SOCKET &client_socket) {
     client_socket = accept(my_socket, (struct sockaddr *) &client_addr, &client_length); 
                             // at previous line you wait until one client connects with you
     if (client_socket < 0) {
-        printf("ERROR on accept\n");
+        std::cout << "ERROR on accept" << std::endl;
         return -1;
     }
     return 0;
@@ -91,7 +91,7 @@ void Net::update_one_client(SOCKET client_socket) {
     }
     switch (buffer[0]) {
       case MSG_HELLO:
-        printf("new client\n");
+        std::cout << "new client" << std::endl;
         new_client();
         break;
 /*
@@ -104,7 +104,7 @@ void Net::update_one_client(SOCKET client_socket) {
         break;
 */
       default:
-        printf("No matches for message type");
+        std::cout << "No matches for message type" << std::endl;
         buffer.read(MSG_FAIL);
         break;
     }

@@ -44,7 +44,10 @@ Net::Net() {
         serv_addr.sin_addr.s_addr = inet_addr(gethostbyname(SERVERADDR)->h_addr_list[0]);
     }
     connect(my_socket, (sockaddr *)&serv_addr, sizeof(serv_addr));
-    cerr << "Connect error: " << WSAGetLastError() << endl;
+    if (WSAGetLastError()) {
+        my_socket = 0;
+        cerr << "Connect error: " << WSAGetLastError() << endl;
+    }
 }
 
 Net::~Net() {
@@ -54,24 +57,28 @@ Net::~Net() {
 #endif
 }
 
-void Net::update(int msg, int x, int y) {
-    int size = 0;
-    switch (msg) {
-    case MSG_HELLO:
-        buffer.read(msg);
-        size = 1;
-        send(my_socket, buffer.get_data(), size, MSG_CONFIRM);
-        if (get_data_timeout(my_socket, BUFF_SIZE, 4)) {
-            cerr << "Connect error: " << WSAGetLastError() << endl;
-        }
-        break;
+void Net::update(int msg, Controls keys) {
+    if (my_socket) {
+        switch (msg) {
+        case MSG_HELLO:
+            buffer.read(msg);
+            send(my_socket, buffer.get_data(), buffer.length(), MSG_CONFIRM);
+            break;
 
-    default:
-        break;
+        case MSG_KEYS_DOWN:
+            buffer.read(msg);
+            buffer.read(keys.to_vec());
+            send(my_socket, buffer.get_data(), buffer.length(), MSG_CONFIRM);
+        default:
+            break;
+        }
+        if (get_data_timeout(my_socket, BUFF_SIZE) == -1) {
+            cerr << "recv error: " << WSAGetLastError() << endl;
+        }
+        for (int i = 0; i < BUFF_SIZE && buffer[i] != 0; i++) {
+            cout << (int)buffer[i] << " ";
+        }
+        cout << endl;
     }
-    for (int i = 0; i < BUFF_SIZE && buffer[i] != 0; i++) {
-        cout << (int)buffer[i] << " ";
-    }
-    cout << endl;
     return;
 }

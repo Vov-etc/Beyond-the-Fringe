@@ -31,6 +31,6 @@ build/buffer.o: src/buffer.cpp src/include/buffer.h
 
 build: 
 	mkdir -p build
-clear:
+clean:
 	rm -rf build
-	rm -rf $(EXE)
+	rm -rf $(EXE).exe

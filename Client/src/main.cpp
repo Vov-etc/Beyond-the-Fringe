@@ -9,6 +9,7 @@
 #include <GL/glut.h>
 #include "include/shader.h"
 #include "include/net.h"
+#include "include/controls.h"
 
 
 using namespace std;
@@ -23,10 +24,15 @@ struct vec {
 
 void display();
 void special(int key, int x, int y);
+void special_up(int key, int x, int y);
+void keyboard(unsigned char key, int x, int y);
+void keyboard_up(unsigned char key, int x, int y);
+void update();
+void passive_motion(int x, int y);
 
 GLuint ShaderProg, VBO, move_location;
 Net net;
-
+Controls kbd;
 
 void init_res() {
     glGenBuffers(1, &VBO);
@@ -48,14 +54,19 @@ void init_res() {
 
 void init_callback() {
     glutDisplayFunc(display);
+    glutKeyboardFunc(keyboard);
+    glutKeyboardUpFunc(keyboard_up);
     glutSpecialFunc(special);
+    glutSpecialUpFunc(special_up);
+    glutPassiveMotionFunc(passive_motion);
+    glutIdleFunc(update);
 }
 
 
 int main(int argc, char * argv[])
 { 
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA); /*¬ключаем двойную буферизацию и четырехкомпонентный цвет*/
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA); 
     glutInitWindowSize(800, 600);
     
     glutCreateWindow("OpenGL lesson 1");
@@ -68,6 +79,7 @@ int main(int argc, char * argv[])
    
     init_res();
     init_callback();
+    net.update(MSG_HELLO, kbd);
     glutMainLoop();
 
     return 0;
@@ -99,12 +111,34 @@ void display() {
 }
 
 void special(int key, int x, int y) {
-    switch (key) {
-    case GLUT_KEY_INSERT:
-        net.update(MSG_HELLO, x, y);
-        break;
+    kbd.set_mouse_pos(x, y);
+    kbd.push(key + 256);
+}
 
-    default:
-        break;
+void special_up(int key, int x, int y) {
+    kbd.set_mouse_pos(x, y);
+    kbd.erase(key + 256);
+}
+
+void keyboard(unsigned char key, int x, int y) {
+    kbd.set_mouse_pos(x, y);
+    kbd.push(key);
+}
+
+void keyboard_up(unsigned char key, int x, int y) {
+    kbd.set_mouse_pos(x, y);
+    kbd.erase(key);
+}
+
+void passive_motion(int x, int y) {
+    kbd.set_mouse_state(false);
+    kbd.set_mouse_pos(x, y);
+}
+
+void update() {
+    for (auto el : kbd.to_vec()) {
+        cout << el << " ";
     }
+    cout << endl;
+    net.update(MSG_KEYS_DOWN, kbd);
 }

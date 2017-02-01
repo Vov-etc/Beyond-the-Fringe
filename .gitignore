@@ -1,5 +1,6 @@
 Server/build
 Server/server.exe
+Server/server
 Client/build
 Client/client.exe
 Client/client

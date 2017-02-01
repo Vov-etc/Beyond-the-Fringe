@@ -28,4 +28,4 @@ build:
 	mkdir -p build
 clean:
 	rm -rf build
-	rm -rf $(EXE)
+	rm -rf $(EXE).exe
