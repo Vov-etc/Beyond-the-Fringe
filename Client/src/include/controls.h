@@ -13,7 +13,7 @@ class Controls {
 public:
 
     Controls():
-    mouse_state (false),
+    mouse_state(false),
     mouse_x(0),
     mouse_y(0)
     {};
